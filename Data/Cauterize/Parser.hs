@@ -26,6 +26,9 @@ typeName = do
     first = under ++ lowers ++ uppers
     rest = first ++ digits
 
+fieldName :: Parser FieldName
+fieldName = typeName
+
 parseRule :: Parser CauterizeRule
 parseRule = try pInfo <|> pType
   where
@@ -40,10 +43,19 @@ parseInfo = parens $ parseName <|> parseVersion
     litThenQuoted s c = string s >> spaces' >> liftM c quoted
 
 parseType :: Parser CautType
-parseType = try pScalar <|> pEnumeration
+parseType = try pScalar
+        <|> try pEnumeration
+        <|> try pFixed
+        <|> try pBounded
+        <|> try pComposite
+        <|>     pGroup
   where
     pScalar = liftM CautScalar parseScalar
     pEnumeration = liftM CautEnumeration parseEnumeration
+    pFixed = liftM CautFixed parseFixed
+    pBounded = liftM CautBounded parseBounded
+    pComposite = liftM CautComposite parseComposite
+    pGroup = liftM CautGroup parseGroup
 
 parseScalar :: Parser Scalar
 parseScalar = parens $ do
@@ -65,8 +77,47 @@ parseEnumValue :: Parser EnumValue
 parseEnumValue = parens $ do
   string "value" >> spaces'
   t <- typeName
-  c <- option Nothing (spaces >> liftM Just parseEnumConst)
+  c <- option Nothing (spaces >> liftM Just parseConst)
   return $ EnumValue t c
 
-parseEnumConst :: Parser EnumConst
-parseEnumConst = liftM (DecConst . T.pack) (many1 digit)
+parseConst :: Parser Const
+parseConst = liftM (DecConst . T.pack) (many1 digit)
+
+parseArray :: String -> (TypeName -> TypeName -> Const -> a) -> Parser a
+parseArray n p = parens $ do
+  string n >> spaces'
+  t <- typeName
+  spaces
+  arrayType <- typeName
+  spaces
+  l <- parseConst
+  return $ p t arrayType l
+  
+
+parseFixed :: Parser FixedArray
+parseFixed = parseArray "fixed" FixedArray
+
+parseBounded :: Parser BoundedArray
+parseBounded = parseArray "bounded" BoundedArray
+
+parseCollection :: String -> (TypeName -> [Field] -> a) -> Parser a
+parseCollection n c = parens $ do
+  string n >> spaces'
+  t <- typeName
+  spaces
+  fs <- parseField `sepBy1` spaces
+  return $ c t fs
+
+parseField :: Parser Field
+parseField = parens $ do
+  string "field" >> spaces'
+  f <- fieldName
+  spaces
+  t <- typeName
+  return $ Field f t
+
+parseComposite :: Parser Composite
+parseComposite = parseCollection "composite" Composite
+
+parseGroup :: Parser Group
+parseGroup = parseCollection "group" Group

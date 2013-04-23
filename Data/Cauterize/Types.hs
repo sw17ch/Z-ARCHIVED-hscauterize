@@ -20,6 +20,10 @@ data CautInfo = CautName Text
 
 data CautType = CautScalar Scalar
               | CautEnumeration Enumeration
+              | CautFixed FixedArray
+              | CautBounded BoundedArray
+              | CautComposite Composite
+              | CautGroup Group
   deriving (Show)
 
 data Scalar = Scalar TypeName TypeName
@@ -28,29 +32,26 @@ data Scalar = Scalar TypeName TypeName
 data Enumeration = Enumeration TypeName [EnumValue]
   deriving (Show)
 
-data EnumValue = EnumValue TypeName (Maybe EnumConst)
+data EnumValue = EnumValue TypeName (Maybe Const)
   deriving (Show)
 
-data EnumConst = HexConst Text
-               | DecConst Text
-               | OctConst Text
-               | BinConst Text
+data Const = HexConst Text
+           | DecConst Text
+           | OctConst Text
+           | BinConst Text
   deriving (Show)
 
-data Fixed = Fixed TypeName TypeName Int
+data FixedArray = FixedArray TypeName TypeName Const
   deriving (Show)
 
-data BoundedArray = BoundedArray TypeName TypeName Int
+data BoundedArray = BoundedArray TypeName TypeName Const
   deriving (Show)
 
-data Composite = Composite TypeName [CompositeField]
+data Composite = Composite TypeName [Field]
   deriving (Show)
 
-data CompositeField = CompositeField FieldName TypeName
+data Group = Group TypeName [Field]
   deriving (Show)
 
-data Group = Group TypeName [GroupField]
-  deriving (Show)
-
-data GroupField = GroupField FieldName TypeName
+data Field = Field FieldName TypeName
   deriving (Show)
