@@ -1,6 +1,8 @@
 module Data.Cauterize.Types where
 
-import Data.Text
+import Data.Text (Text, unpack)
+import Text.PrettyPrint
+import Text.PrettyPrint.HughesPJClass
 
 type TypeName = Text
 type FieldName = Text
@@ -55,3 +57,52 @@ data Group = Group TypeName [Field]
 
 data Field = Field FieldName TypeName
   deriving (Show)
+
+{- And now, some Show instances. -}
+
+ppTxt :: Text -> Doc
+ppTxt = text . unpack
+
+instance Pretty Cauterize where
+  pPrint (Cauterize rules) = parens $ text "cauterize" <+> pRules
+    where
+      pRules = vcat $ map pPrint rules
+
+instance Pretty CauterizeRule where
+  pPrint (CauterizeInfo info) = pPrint info
+  pPrint (CauterizeType typ) = pPrint typ
+
+instance Pretty CautInfo where
+  pPrint i = parens $ case i of
+                        CautName n -> text "name" <+> dqPpTxt n
+                        CautVersion v -> text "version" <+> dqPpTxt v
+    where
+      dqPpTxt = doubleQuotes . ppTxt
+
+instance Pretty CautType where
+  pPrint t = parens $ case t of
+                        (CautScalar (Scalar n m)) -> text "scalar" <+> ppTxt n <+> ppTxt m
+                        (CautEnumeration (Enumeration n vs)) -> text "enumeration" <+> ppTxt n <+> pVM vs
+                        (CautFixed (FixedArray n m c)) -> text "fixed" <+> ppTxt n <+> ppTxt m <+> pPrint c
+                        (CautBounded (BoundedArray n m c)) -> text "bounded" <+> ppTxt n <+> ppTxt m <+> pPrint c
+                        (CautComposite (Composite n fs)) -> text "composite" <+> ppTxt n <+> pVM fs
+                        (CautGroup (Group n fs)) -> text "group" <+> ppTxt n <+> pVM fs
+    where
+      pVM vs = vcat $ map pPrint vs
+    
+
+instance Pretty EnumValue where
+  pPrint (EnumValue n c)
+    = let c' = case c of
+                    Nothing -> empty
+                    Just i -> pPrint i
+      in lparen <> text "value" <+> ppTxt n <+> c' <> rparen
+
+instance Pretty Const where
+  pPrint (HexConst t) = ppTxt t
+  pPrint (DecConst t) = ppTxt t
+  pPrint (OctConst t) = ppTxt t
+  pPrint (BinConst t) = ppTxt t
+
+instance Pretty Field where
+  pPrint (Field n m) = parens $ text "field" <+> ppTxt n <+> ppTxt m
