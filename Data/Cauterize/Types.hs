@@ -11,15 +11,19 @@ type FieldName = Text
 
 -- |The top level 'Cauterize' parser type. The schema parser returns an
 -- instance of this type.
-data Cauterize = Cauterize [CauterizeRule] -- ^ A schema is a list of rules.
+data Cauterize = Cauterize { cauterizeName    :: CauterizeName
+                           , cauterizeVersion :: CauterizeVersion
+                           , cauterizeRules :: [CauterizeRule]
+                           } 
   deriving (Show, Data, Typeable)
 
-data CauterizeRule = CauterizeInfo { unInfo :: CautInfo }
-                   | CauterizeType { unType :: CautType }
+data CauterizeName = CauterizeName { unName :: Text }
   deriving (Show, Data, Typeable)
 
-data CautInfo = CautName { unCautName :: Text }
-              | CautVersion { unCautVersion :: Text }
+data CauterizeVersion = CauterizeVersion { unVersion :: Text }
+  deriving (Show, Data, Typeable)
+
+data CauterizeRule = CauterizeType { unType :: CautType }
   deriving (Show, Data, Typeable)
 
 data CautType = CautScalar Scalar
@@ -65,21 +69,22 @@ data Field = Field FieldName TypeName
 ppTxt :: Text -> Doc
 ppTxt = text . unpack
 
+dqPpTxt :: Text -> Doc
+dqPpTxt = doubleQuotes . ppTxt
+
 instance Pretty Cauterize where
-  pPrint (Cauterize rules) = parens $ text "cauterize" <+> pRules
+  pPrint (Cauterize name version rules) = parens $ text "cauterize" <+> pPrint name <+> pPrint version <+> pRules
     where
       pRules = vcat $ map pPrint rules
 
 instance Pretty CauterizeRule where
-  pPrint (CauterizeInfo info) = pPrint info
   pPrint (CauterizeType typ) = pPrint typ
 
-instance Pretty CautInfo where
-  pPrint i = parens $ case i of
-                        CautName n -> text "name" <+> dqPpTxt n
-                        CautVersion v -> text "version" <+> dqPpTxt v
-    where
-      dqPpTxt = doubleQuotes . ppTxt
+instance Pretty CauterizeName where
+  pPrint n = parens $ dqPpTxt (unName n)
+
+instance Pretty CauterizeVersion where
+  pPrint n = parens $ dqPpTxt (unVersion n)
 
 instance Pretty CautType where
   pPrint t = parens $ case t of

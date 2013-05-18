@@ -1,6 +1,4 @@
-(cauterize
-  (name "example")
-  (version "0.0.1")
+(cauterize "example" "0.0.1"
 
   (scalar foo uint8)
   (scalar bar uint32)

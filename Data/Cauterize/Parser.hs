@@ -11,7 +11,11 @@ import Data.Cauterize.Parser.Utils
 parseCauterize :: Parser Cauterize
 parseCauterize = parens $ do
   string "cauterize" >> spaces'
-  liftM Cauterize (parseRule `sepBy` many1 space)
+  n <- parseName
+  spaces
+  v <- parseVersion
+  spaces
+  liftM (Cauterize n v) (parseRule `sepBy` many1 space)
 
 typeName :: Parser TypeName
 typeName = do
@@ -30,17 +34,18 @@ fieldName :: Parser FieldName
 fieldName = typeName
 
 parseRule :: Parser CauterizeRule
-parseRule = try pInfo <|> pType
+parseRule = pType
   where
-    pInfo = liftM CauterizeInfo parseInfo
     pType = liftM CauterizeType parseType
 
-parseInfo :: Parser CautInfo
-parseInfo = parens $ parseName <|> parseVersion
-  where
-    parseName = litThenQuoted "name" CautName
-    parseVersion = litThenQuoted "version" CautVersion
-    litThenQuoted s c = string s >> spaces' >> liftM c quoted
+litThenQuoted :: String -> (T.Text -> b) -> Parser b
+litThenQuoted s c = string s >> spaces' >> liftM c quoted
+
+parseName :: Parser CauterizeName
+parseName = liftM CauterizeName quoted
+
+parseVersion :: Parser CauterizeVersion
+parseVersion = liftM CauterizeVersion quoted
 
 parseType :: Parser CautType
 parseType = try pScalar
@@ -57,9 +62,12 @@ parseType = try pScalar
     pComposite = liftM CautComposite parseComposite
     pGroup = liftM CautGroup parseGroup
 
+string_ :: String -> Parser ()
+string_ n = string n >> spaces'
+
 parseScalar :: Parser Scalar
 parseScalar = parens $ do
-  string "scalar" >> spaces'
+  string_ "scalar"
   t1 <- typeName 
   spaces
   t2 <- typeName 
@@ -67,7 +75,7 @@ parseScalar = parens $ do
 
 parseEnumeration :: Parser Enumeration
 parseEnumeration = parens $ do
-  string "enumeration" >> spaces'
+  string_ "enumeration"
   t <- typeName
   spaces
   vs <- parseEnumValue `sepBy1` spaces
@@ -75,7 +83,7 @@ parseEnumeration = parens $ do
 
 parseEnumValue :: Parser EnumValue
 parseEnumValue = parens $ do
-  string "value" >> spaces'
+  string_ "value"
   t <- typeName
   c <- option Nothing (spaces >> liftM Just parseConst)
   return $ EnumValue t c
@@ -85,7 +93,7 @@ parseConst = liftM (DecConst . T.pack) (many1 digit)
 
 parseArray :: String -> (TypeName -> TypeName -> Const -> a) -> Parser a
 parseArray n p = parens $ do
-  string n >> spaces'
+  string_ n
   t <- typeName
   spaces
   arrayType <- typeName

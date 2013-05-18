@@ -4,28 +4,14 @@ module Data.Cauterize.Generators.C where
 
 import Data.Text (unpack)
 import Data.Cauterize.Types
-import Data.Generics.Schemes
-import Data.List
 import Language.C.Quote.C
 import Text.PrettyPrint.Mainland
 
 genC :: Cauterize -> Doc
-genC (Cauterize rs) = ppr ci
+genC (Cauterize n v _) = ppr ci
   where
-    isInfo (CauterizeInfo _) = True
-    isInfo _ = False
-
-    infos = map unInfo $ listify isInfo rs
-
-    isName (CautName _) = True
-    isName _ = False
-
-    firstOr [] x = x
-    firstOr (x:_) _ = x
-
-    (names, versions) = partition isName infos
-    name = unpack $ unCautName $ names `firstOr` CautName "<UNNAMED>"
-    version = unpack $ unCautVersion $ versions `firstOr` CautVersion "<UNVERSIONED>"
+    name = unpack $ unName n
+    version = unpack $ unVersion v
 
     ci = [cedecl|
             struct cauterize_info info = {
