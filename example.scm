@@ -4,6 +4,8 @@
 
   (scalar foo uint8)
   (scalar bar uint32)
+  (scalar some_floating_point float32)
+  (scalar some_floating_point float64)
   
   (enumeration meep
                (value a)

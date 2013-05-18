@@ -13,17 +13,20 @@ cabal-version:       >=1.8
 data-files:          support/*.h, support/*.c
 
 executable cauterize
+  ghc-options:         -Wall -O2
   build-depends:       base ==4.5.*,
                        text ==0.11.*,
                        parsec ==3.1.*,
                        pretty ==1.1.*,
                        prettyclass ==1.0.*,
                        language-c-quote ==0.7.*,
-                       mainland-pretty ==0.2.*
+                       mainland-pretty ==0.2.*,
+                       syb ==0.3.*
 
   main-is:             cauterize.hs
 
 library
+  ghc-options:         -Wall
   exposed-modules:     Data.Cauterize.Parser,
                        Data.Cauterize.Parser.Utils,
                        Data.Cauterize.Types,
@@ -35,4 +38,5 @@ library
                        pretty ==1.1.*,
                        prettyclass ==1.0.*,
                        language-c-quote ==0.7.*,
-                       mainland-pretty ==0.2.*
+                       mainland-pretty ==0.2.*,
+                       syb ==0.3.*

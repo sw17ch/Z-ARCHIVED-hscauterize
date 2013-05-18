@@ -1,5 +1,7 @@
+{-# LANGUAGE DeriveDataTypeable #-}
 module Data.Cauterize.Types where
 
+import Data.Data
 import Data.Text (Text, unpack)
 import Text.PrettyPrint
 import Text.PrettyPrint.HughesPJClass
@@ -10,15 +12,15 @@ type FieldName = Text
 -- |The top level 'Cauterize' parser type. The schema parser returns an
 -- instance of this type.
 data Cauterize = Cauterize [CauterizeRule] -- ^ A schema is a list of rules.
-  deriving (Show)
+  deriving (Show, Data, Typeable)
 
-data CauterizeRule = CauterizeInfo CautInfo
-                   | CauterizeType CautType
-  deriving (Show)
+data CauterizeRule = CauterizeInfo { unInfo :: CautInfo }
+                   | CauterizeType { unType :: CautType }
+  deriving (Show, Data, Typeable)
 
-data CautInfo = CautName Text
-              | CautVersion Text
-  deriving (Show)
+data CautInfo = CautName { unCautName :: Text }
+              | CautVersion { unCautVersion :: Text }
+  deriving (Show, Data, Typeable)
 
 data CautType = CautScalar Scalar
               | CautEnumeration Enumeration
@@ -26,37 +28,37 @@ data CautType = CautScalar Scalar
               | CautBounded BoundedArray
               | CautComposite Composite
               | CautGroup Group
-  deriving (Show)
+  deriving (Show, Data, Typeable)
 
 data Scalar = Scalar TypeName TypeName
-  deriving (Show)
+  deriving (Show, Data, Typeable)
 
 data Enumeration = Enumeration TypeName [EnumValue]
-  deriving (Show)
+  deriving (Show, Data, Typeable)
 
 data EnumValue = EnumValue TypeName (Maybe Const)
-  deriving (Show)
+  deriving (Show, Data, Typeable)
 
 data Const = HexConst Text
            | DecConst Text
            | OctConst Text
            | BinConst Text
-  deriving (Show)
+  deriving (Show, Data, Typeable)
 
 data FixedArray = FixedArray TypeName TypeName Const
-  deriving (Show)
+  deriving (Show, Data, Typeable)
 
 data BoundedArray = BoundedArray TypeName TypeName Const
-  deriving (Show)
+  deriving (Show, Data, Typeable)
 
 data Composite = Composite TypeName [Field]
-  deriving (Show)
+  deriving (Show, Data, Typeable)
 
 data Group = Group TypeName [Field]
-  deriving (Show)
+  deriving (Show, Data, Typeable)
 
 data Field = Field FieldName TypeName
-  deriving (Show)
+  deriving (Show, Data, Typeable)
 
 {- And now, some Show instances. -}
 

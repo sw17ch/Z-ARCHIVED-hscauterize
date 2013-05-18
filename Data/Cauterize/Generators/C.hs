@@ -1,16 +1,49 @@
 {-# LANGUAGE QuasiQuotes #-}
+{-# LANGUAGE OverloadedStrings #-}
 module Data.Cauterize.Generators.C where
 
-import Text.PrettyPrint.Mainland
+import Data.Text (unpack)
+import Data.Cauterize.Types
+import Data.Generics.Schemes
+import Data.List
 import Language.C.Quote.C
+import Text.PrettyPrint.Mainland
 
-genC :: IO ()
-genC = print $ ppr f
+genC :: Cauterize -> Doc
+genC (Cauterize rs) = ppr ci
   where
-    ty = [cty|int|]
-    idnt = "x"
-    fname = "foo"
-    param = [cparam|$ty:ty $id:idnt|]
+    isInfo (CauterizeInfo _) = True
+    isInfo _ = False
 
-    f = [cfun|$ty:ty $id:fname($param:param) { return $id:idnt; }|]
+    infos = map unInfo $ listify isInfo rs
 
+    isName (CautName _) = True
+    isName _ = False
+
+    firstOr [] x = x
+    firstOr (x:_) _ = x
+
+    (names, versions) = partition isName infos
+    name = unpack $ unCautName $ names `firstOr` CautName "<UNNAMED>"
+    version = unpack $ unCautVersion $ versions `firstOr` CautVersion "<UNVERSIONED>"
+
+    ci = [cedecl|
+            struct cauterize_info info = {
+              .name = $id:name,
+              .version = $id:version,
+            };
+         |]
+
+-- tag = let i = "tag"
+--           t = [cty|enum foo_grp_tag { a, b, }|]
+--       in (i, t)
+-- 
+-- dat = let i = "data"
+--           t = [cty|union { int a; int b; }|]
+--       in (i, t)
+-- 
+-- grp = let (di, dt) = dat
+--           (ti, tt) = tag
+--           td = [csdecl|$ty:tt $id:ti;|]
+--           ud = [csdecl|$ty:dt $id:di;|]
+--       in [cty|struct foo_grp { $sdecl:td $sdecl:ud }|]
