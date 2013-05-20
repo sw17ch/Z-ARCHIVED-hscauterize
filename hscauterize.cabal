@@ -23,7 +23,7 @@ executable hscauterize
                        mainland-pretty ==0.2.*,
                        syb ==0.3.*
 
-  main-is:             cauterize.hs
+  main-is:             hscauterize.hs
 
 library
   ghc-options:         -Wall
