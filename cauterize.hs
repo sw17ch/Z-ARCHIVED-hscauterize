@@ -11,6 +11,6 @@ main = do
   d <- TO.readFile fname
   case parse parseCauterize fname d of
     Left e -> print e
-    Right v -> print $ genC v
+    Right v -> print $ gen v
   where
     fname = "example.scm"

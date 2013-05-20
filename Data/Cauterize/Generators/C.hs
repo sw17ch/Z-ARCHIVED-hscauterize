@@ -5,10 +5,11 @@ module Data.Cauterize.Generators.C where
 import Data.Text (unpack)
 import Data.Cauterize.Types
 import Language.C.Quote.C
+import qualified Language.C.Syntax as C
 import Text.PrettyPrint.Mainland
 
-genC :: Cauterize -> Doc
-genC (Cauterize n v _) = ppr ci
+gen :: Cauterize -> Doc
+gen (Cauterize n v _) = genScalar (Scalar "foo" "int32_t") -- ppr ci
   where
     name = unpack $ unName n
     version = unpack $ unVersion v
@@ -19,6 +20,19 @@ genC (Cauterize n v _) = ppr ci
               .version = $id:version,
             };
          |]
+
+genRule :: CauterizeRule -> Doc
+genRule (CauterizeType t) = genType t
+
+genType :: CautType -> Doc
+genType (CautScalar s) = genScalar s
+genType _ = ppr [cedecl|struct some_type;|]
+
+genScalar :: Scalar -> Doc
+genScalar (Scalar _ _) = ppr [cty|typedef int x|]
+
+anInt :: C.Type
+anInt = [cty|int|]
 
 -- tag = let i = "tag"
 --           t = [cty|enum foo_grp_tag { a, b, }|]
