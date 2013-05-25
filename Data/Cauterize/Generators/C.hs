@@ -29,21 +29,23 @@ genType (CautScalar s) = genScalar s
 genType _ = ppr [cedecl|struct some_type;|]
 
 genScalar :: Scalar -> Doc
-genScalar (Scalar _ _) = ppr [cty|typedef int x|]
+genScalar (Scalar name typ) = ppr [cdecl|typedef $ty:i x;|]
+  where
+    i = [cty|int|]
 
 anInt :: C.Type
 anInt = [cty|int|]
 
--- tag = let i = "tag"
---           t = [cty|enum foo_grp_tag { a, b, }|]
---       in (i, t)
--- 
--- dat = let i = "data"
---           t = [cty|union { int a; int b; }|]
---       in (i, t)
--- 
+tag = let i = "tag"
+          t = [cdecl|enum foo_grp_tag { a, b, };|]
+      in (i, t)
+
+dat = let i = "data"
+          t = [cdecl|union { int a; int b; };|]
+      in (i, t)
+
 -- grp = let (di, dt) = dat
 --           (ti, tt) = tag
 --           td = [csdecl|$ty:tt $id:ti;|]
 --           ud = [csdecl|$ty:dt $id:di;|]
---       in [cty|struct foo_grp { $sdecl:td $sdecl:ud }|]
+--       in [cdecl|struct foo_grp { $sdecl:td $sdecl:ud };|]
