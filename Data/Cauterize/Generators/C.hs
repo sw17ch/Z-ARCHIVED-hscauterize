@@ -9,40 +9,37 @@ import qualified Language.C.Syntax as C
 import Text.PrettyPrint.Mainland
 
 gen :: Cauterize -> Doc
-gen (Cauterize n v _) = genScalar (Scalar "foo" "int32_t") -- ppr ci
+gen (Cauterize n v rs) = ppr ci </> (stack $ map ppr rules)
   where
     name = unpack $ unName n
     version = unpack $ unVersion v
 
     ci = [cedecl|
-            struct cauterize_info info = {
-              .name = $id:name,
-              .version = $id:version,
+            const struct cauterize_info info = {
+              .name = $string:name,
+              .version = $string:version,
             };
          |]
 
-genRule :: CauterizeRule -> Doc
+    rules = map genRule rs
+
+genRule :: CauterizeRule -> C.Definition
 genRule (CauterizeType t) = genType t
 
-genType :: CautType -> Doc
+genType :: CautType -> C.Definition
 genType (CautScalar s) = genScalar s
-genType _ = ppr [cedecl|struct some_type;|]
+genType _ = [cedecl|struct some_unknown_type;|]
 
-genScalar :: Scalar -> Doc
-genScalar (Scalar name typ) = ppr [cdecl|typedef $ty:i x;|]
+genScalar :: Scalar -> C.Definition
+genScalar (Scalar name typ) = [cedecl|typedef $ty:typ' $id:(unpack name);|]
   where
-    i = [cty|int|]
+    typ' = [cty|typename $id:(unpack typ)|]
+    -- There's a comment in Language/C/Quote.hs that describes using 'typename'
+    -- to introduce an identifier that represents a type that may not yet be in
+    -- scope. That's what we're doing here to construct our typedef.
 
 anInt :: C.Type
 anInt = [cty|int|]
-
-tag = let i = "tag"
-          t = [cdecl|enum foo_grp_tag { a, b, };|]
-      in (i, t)
-
-dat = let i = "data"
-          t = [cdecl|union { int a; int b; };|]
-      in (i, t)
 
 -- grp = let (di, dt) = dat
 --           (ti, tt) = tag
