@@ -1,6 +1,6 @@
 {-# LANGUAGE QuasiQuotes #-}
 {-# LANGUAGE OverloadedStrings #-}
-module Data.Cauterize.Generators.C where
+module Data.Cauterize.Generators.C ( gen ) where
 
 import Data.Text (unpack)
 import Data.Cauterize.Types
@@ -8,6 +8,7 @@ import qualified Data.Map as M
 import Language.C.Quote.C
 import qualified Language.C.Syntax as C
 import Text.PrettyPrint.Mainland
+import Control.Monad.Reader
 
 gen :: Cauterize -> Doc
 gen (Cauterize n v rs) = ppr ci </> (stack $ map ppr rules)
@@ -23,30 +24,30 @@ gen (Cauterize n v rs) = ppr ci </> (stack $ map ppr rules)
          |]
 
     rules :: [C.Definition]
-    rules = map genRule (M.elems rs)
+    rules = map (\r -> runReader (genRule r) rs) (M.elems rs)
 
-genRule :: CauterizeRule -> C.Definition
+genRule :: CauterizeRule -> Reader (M.Map TypeName CauterizeRule) C.Definition
 genRule (CauterizeType t) = genType t
 
-genType :: CautType -> C.Definition
+genType :: CautType -> Reader (M.Map TypeName CauterizeRule) C.Definition
 genType (CautScalar s) = genScalar s
 genType (CautEnumeration e) = genEnumeration e
 genType (CautFixed a) = genFixedArray a
 genType (CautBounded a) = genBoundedArray a
 genType (CautComposite c) = genComposite c
-genType _ = [cedecl|struct some_unknown_type;|]
+genType (CautGroup g) = genGroup g
 
-genScalar :: Scalar -> C.Definition
-genScalar (Scalar name typ) = [cedecl|typedef $ty:typ' $id:(unpack name);|]
+genScalar :: Scalar -> Reader (M.Map TypeName CauterizeRule) C.Definition
+genScalar (Scalar name typ) = return [cedecl|typedef $ty:typ' $id:(unpack name);|]
   where
     typ' = [cty|typename $id:(unpack typ)|]
     -- There's a comment in Language/C/Quote.hs that describes using 'typename'
     -- to introduce an identifier that represents a type that may not yet be in
     -- scope. That's what we're doing here to construct our typedef.
 
-genEnumeration :: Enumeration -> C.Definition
+genEnumeration :: Enumeration -> Reader (M.Map TypeName CauterizeRule) C.Definition
 genEnumeration (Enumeration name values) =
-  [cedecl|
+  return [cedecl|
     enum $id:(unpack name) {
       $enums:(map asC values)
     };
@@ -60,26 +61,39 @@ genEnumeration (Enumeration name values) =
         (OctConst i _) -> [cenum|$id:(unpack valn) = $int:(i) |]
         (BinConst i _) -> [cenum|$id:(unpack valn) = $int:(i) |]
 
-anInt :: C.Type
-anInt = [cty|int|]
+typeNameToType :: (M.Map TypeName CauterizeRule) -> TypeName -> C.Type
+typeNameToType c n = ruleToType r
+  where
+    r = case M.lookup n c of
+          (Just r') -> r'
+          Nothing -> error $ "ERROR: No type named " ++ (unpack n)
 
-genFixedArray :: FixedArray -> C.Definition
-genFixedArray (FixedArray name member_name len) =
-  [cedecl|
+ruleToType :: CauterizeRule -> C.Type
+ruleToType (CauterizeType (CautScalar (Scalar n _))) = [cty|typename $id:(unpack n)|]
+ruleToType (CauterizeType (CautEnumeration (Enumeration n _))) = [cty|enum $id:(unpack n)|]
+ruleToType (CauterizeType (CautFixed (FixedArray n _ _))) = [cty|struct $id:(unpack n)|]
+ruleToType (CauterizeType (CautBounded (BoundedArray n _ _))) = [cty|struct $id:(unpack n)|]
+ruleToType (CauterizeType (CautComposite (Composite n _))) = [cty|struct $id:(unpack n)|]
+ruleToType (CauterizeType (CautGroup (Group n _))) = [cty|struct $id:(unpack n)|]
+
+genFixedArray :: FixedArray -> Reader (M.Map TypeName CauterizeRule) C.Definition
+genFixedArray (FixedArray name member_name len) = do
+  c <- ask
+  return [cedecl|
      struct $id:(unpack name) {
-       $ty:arTy data;
+       $ty:(arTy c) data;
      };
    |]
   where
-    arTy = let t = [cty|typename $id:(unpack member_name)|]
-               s = [cexp|$(constVal len)|]
-           in [cty|$ty:t dummy[$exp:s]|]
+    arTy c = let t = typeNameToType c member_name
+                 s = [cexp|$(constVal len)|]
+             in [cty|$ty:t dummy[$exp:s]|]
 
 arrLenToRep :: Integer -> C.Type
-arrLenToRep len | between (0   :: Integer) (u08 - 1 :: Integer) = tn ("uint8_t"  :: String)
-                | between (u08 :: Integer) (u16 - 1 :: Integer) = tn ("uint16_t" :: String)
-                | between (u16 :: Integer) (u32 - 1 :: Integer) = tn ("uint32_t" :: String) 
-                | between (u32 :: Integer) (u64 - 1 :: Integer) = tn ("uint64_t" :: String) 
+arrLenToRep len | between 0   (u08 - 1) = tn ("uint8_t"  :: String)
+                | between u08 (u16 - 1) = tn ("uint16_t" :: String)
+                | between u16 (u32 - 1) = tn ("uint32_t" :: String) 
+                | between u32 (u64 - 1) = tn ("uint64_t" :: String) 
                 | otherwise = error "Array length out of bounds."
   where
     between :: Integer -> Integer -> Bool
@@ -92,35 +106,49 @@ arrLenToRep len | between (0   :: Integer) (u08 - 1 :: Integer) = tn ("uint8_t" 
     u32 = (2 :: Integer) ^ (32 :: Integer)
     u64 = (2 :: Integer) ^ (64 :: Integer)
 
-genBoundedArray :: BoundedArray -> C.Definition
-genBoundedArray (BoundedArray name member_name max_len) =
-  let clen = constVal max_len
-  in [cedecl|
-        struct $id:(unpack name) {
-          $ty:(arrLenToRep clen) length;
-          $ty:arTy data;
-        };
-      |]
+genBoundedArray :: BoundedArray -> Reader (M.Map TypeName CauterizeRule) C.Definition
+genBoundedArray (BoundedArray name member_name max_len) = do
+  c <- ask
+  return [cedecl|
+     struct $id:(unpack name) {
+       $ty:(arrLenToRep clen) length;
+       $ty:(arTy c) data;
+     };
+   |]
   where
-    arTy = let t = [cty|typename $id:(unpack member_name)|]
-               s = [cexp|$(constVal max_len)|]
-           in [cty|$ty:t dummy[$exp:s]|]
+    clen = constVal max_len
+    arTy c = let t = typeNameToType c member_name
+                 s = [cexp|$(constVal max_len)|]
+             in [cty|$ty:t dummy[$exp:s]|]
 
-genComposite :: Composite -> C.Definition
-genComposite (Composite name fields) = 
-  [cedecl|
-    struct $id:(unpack name) {
-      int oh_man_there_is_a_lot_to_do_here;
-    };
+fieldDef :: M.Map TypeName CauterizeRule -> Field -> C.FieldGroup
+fieldDef c (Field fname tname) =
+  let t = typeNameToType c tname
+  in [csdecl|$ty:t $id:(unpack fname);|]
+
+genComposite :: Composite -> Reader (M.Map TypeName CauterizeRule) C.Definition
+genComposite (Composite name fields) = do
+  c <- ask
+  return [cedecl|
+    struct $id:(unpack name) { $sdecls:(map (fieldDef c) fields) };
   |]
 
-  where
-    fieldDef (Field fname tname) =
-      let t = [cty|typename $id:(unpack tname)|]
-      in [cedecl|$ty:t $id:(unpack fname);|]
+fieldToTagName :: String -> Field -> String
+fieldToTagName prefix (Field n _) = prefix ++ (unpack n)
 
--- grp = let (di, dt) = dat
---           (ti, tt) = tag
---           td = [csdecl|$ty:tt $id:ti;|]
---           ud = [csdecl|$ty:dt $id:di;|]
---       in [cdecl|struct foo_grp { $sdecl:td $sdecl:ud };|]
+fieldsToTagPairs :: String -> [Field] -> [(String, Integer)]
+fieldsToTagPairs prefix fs = let names = map (fieldToTagName prefix) fs
+                             in zip names [0..]
+
+genGroup :: Group -> Reader (M.Map TypeName CauterizeRule) C.Definition
+genGroup (Group name fields) = do
+  c <- ask
+  return [cedecl|
+    struct $id:(unpack name) {
+      enum { $enums:tags } tag;
+      union { $sdecls:(map (fieldDef c) fields) } data;
+    };
+  |]
+  where
+    tag_prefix = "GROUP_" ++ (unpack name) ++ "_TAG_"
+    tags = map (\(n, i) -> [cenum|$id:n = $int:i|]) (fieldsToTagPairs tag_prefix fields)

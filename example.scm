@@ -11,10 +11,10 @@
                (value c 40))
 
   (fixed fixed_meeps meep 64)
-  (bounded bounded_meeps meeps 64)
+  (bounded bounded_meeps meep 64)
   (composite some_arrays
-             (field fixed_field fixed_array)
-             (field bounded_field bounded_array))
+             (field fixed_field fixed_meeps)
+             (field bounded_field bounded_meeps))
   (group some_types
          (field an_enum meep)
          (field a_scalar foo)))

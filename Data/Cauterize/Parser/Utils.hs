@@ -1,4 +1,4 @@
-module Data.Cauterize.Parser.Utils where
+module Data.Cauterize.Parser.Utils ( parens , quoted  , spaces' ) where
 
 import Text.Parsec
 import Text.Parsec.Text

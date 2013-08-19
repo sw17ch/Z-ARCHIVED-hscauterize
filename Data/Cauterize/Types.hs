@@ -1,6 +1,28 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE DeriveDataTypeable #-}
-module Data.Cauterize.Types where
+module Data.Cauterize.Types ( Cauterize(..)
+                            , CauterizeName(..)
+                            , CauterizeVersion(..)
+                            , CauterizeRule(..)
+                            , CautType(..)
+
+                            , Scalar(..)
+                            , Enumeration(..)
+                            , FixedArray(..)
+                            , BoundedArray(..)
+                            , Composite(..)
+                            , Group(..)
+
+                            , Field(..)
+                            , EnumValue(..)
+
+                            , Const(..)
+
+                            , TypeName
+                            , FieldName
+
+                            , cauterizeName
+                            ) where
 
 import Data.Data
 import Data.Text (Text, unpack)
@@ -128,21 +150,3 @@ ppTxt = text . unpack
 
 dqPpTxt :: Text -> Doc
 dqPpTxt = doubleQuotes . ppTxt
-
-isScalar (CautScalar _) = True
-isScalar _ = False
-
-isEnumeration (CautEnumeration _) = True
-isEnumeration _ = False
-
-isFixedArray (CautFixed _) = True
-isFixedArray _ = False
-
-isBoundedArray (CautBounded _) = True
-isBoundedArray _ = False
-
-isComposite (CautComposite _) = True
-isComposite _ = False
-
-isGroup (CautGroup _) = True
-isGroup _ = False

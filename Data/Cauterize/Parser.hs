@@ -1,4 +1,4 @@
-module Data.Cauterize.Parser where
+module Data.Cauterize.Parser ( parseCauterize ) where
 
 import qualified Data.Text as T
 import Text.Parsec
@@ -43,9 +43,6 @@ parseRule :: Parser CauterizeRule
 parseRule = pType
   where
     pType = liftM CauterizeType parseType
-
-litThenQuoted :: String -> (T.Text -> b) -> Parser b
-litThenQuoted s c = string s >> spaces' >> liftM c quoted
 
 parseName :: Parser CauterizeName
 parseName = liftM CauterizeName quoted
