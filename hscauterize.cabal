@@ -19,9 +19,11 @@ executable hscauterize
                        parsec ==3.1.*,
                        pretty ==1.1.*,
                        prettyclass ==1.0.*,
-                       language-c-quote ==0.7.*,
+                       language-c-quote >=0.7.3,
                        mainland-pretty ==0.2.*,
-                       syb ==0.3.*
+                       syb ==0.3.*,
+                       containers ==0.5.*
+
 
   main-is:             hscauterize.hs
 
@@ -39,4 +41,5 @@ library
                        prettyclass ==1.0.*,
                        language-c-quote ==0.7.*,
                        mainland-pretty ==0.2.*,
-                       syb ==0.3.*
+                       syb ==0.3.*,
+                       containers ==0.5.*

@@ -1,8 +1,10 @@
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE DeriveDataTypeable #-}
 module Data.Cauterize.Types where
 
 import Data.Data
 import Data.Text (Text, unpack)
+import qualified Data.Map as M
 import Text.PrettyPrint
 import Text.PrettyPrint.HughesPJClass
 
@@ -11,9 +13,9 @@ type FieldName = Text
 
 -- |The top level 'Cauterize' parser type. The schema parser returns an
 -- instance of this type.
-data Cauterize = Cauterize { cauterizeName    :: CauterizeName
-                           , cauterizeVersion :: CauterizeVersion
-                           , cauterizeRules :: [CauterizeRule]
+data Cauterize = Cauterize { cauterizeSchemaName :: CauterizeName
+                           , cauterizeVersion    :: CauterizeVersion
+                           , cauterizeRules      :: M.Map TypeName CauterizeRule
                            } 
   deriving (Show, Data, Typeable)
 
@@ -43,10 +45,10 @@ data Enumeration = Enumeration TypeName [EnumValue]
 data EnumValue = EnumValue TypeName (Maybe Const)
   deriving (Show, Data, Typeable)
 
-data Const = HexConst Text
-           | DecConst Text
-           | OctConst Text
-           | BinConst Text
+data Const = HexConst { constVal :: Integer, constText :: Text }
+           | DecConst { constVal :: Integer, constText :: Text }
+           | OctConst { constVal :: Integer, constText :: Text }
+           | BinConst { constVal :: Integer, constText :: Text }
   deriving (Show, Data, Typeable)
 
 data FixedArray = FixedArray TypeName TypeName Const
@@ -66,16 +68,10 @@ data Field = Field FieldName TypeName
 
 {- And now, some Show instances. -}
 
-ppTxt :: Text -> Doc
-ppTxt = text . unpack
-
-dqPpTxt :: Text -> Doc
-dqPpTxt = doubleQuotes . ppTxt
-
 instance Pretty Cauterize where
   pPrint (Cauterize name version rules) = parens $ text "cauterize" <+> pPrint name <+> pPrint version <+> pRules
     where
-      pRules = vcat $ map pPrint rules
+      pRules = vcat $ map pPrint (M.elems rules)
 
 instance Pretty CauterizeRule where
   pPrint (CauterizeType typ) = pPrint typ
@@ -106,10 +102,47 @@ instance Pretty EnumValue where
       in lparen <> text "value" <+> ppTxt n <+> c' <> rparen
 
 instance Pretty Const where
-  pPrint (HexConst t) = ppTxt t
-  pPrint (DecConst t) = ppTxt t
-  pPrint (OctConst t) = ppTxt t
-  pPrint (BinConst t) = ppTxt t
+  pPrint (HexConst _ t) = ppTxt t
+  pPrint (DecConst _ t) = ppTxt t
+  pPrint (OctConst _ t) = ppTxt t
+  pPrint (BinConst _ t) = ppTxt t
 
 instance Pretty Field where
   pPrint (Field n m) = parens $ text "field" <+> ppTxt n <+> ppTxt m
+
+class CauterizeNamed a where
+  cauterizeName :: a -> TypeName
+
+instance CauterizeNamed CauterizeRule where
+  cauterizeName (CauterizeType (CautScalar (Scalar n _))) = n
+  cauterizeName (CauterizeType (CautEnumeration (Enumeration n _))) = n
+  cauterizeName (CauterizeType (CautFixed (FixedArray n _ _))) = n
+  cauterizeName (CauterizeType (CautBounded (BoundedArray n _ _))) = n
+  cauterizeName (CauterizeType (CautComposite (Composite n _))) = n
+  cauterizeName (CauterizeType (CautGroup (Group n _))) = n
+
+{- And now, some helper functions. -}
+
+ppTxt :: Text -> Doc
+ppTxt = text . unpack
+
+dqPpTxt :: Text -> Doc
+dqPpTxt = doubleQuotes . ppTxt
+
+isScalar (CautScalar _) = True
+isScalar _ = False
+
+isEnumeration (CautEnumeration _) = True
+isEnumeration _ = False
+
+isFixedArray (CautFixed _) = True
+isFixedArray _ = False
+
+isBoundedArray (CautBounded _) = True
+isBoundedArray _ = False
+
+isComposite (CautComposite _) = True
+isComposite _ = False
+
+isGroup (CautGroup _) = True
+isGroup _ = False

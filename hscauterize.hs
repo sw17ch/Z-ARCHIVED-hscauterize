@@ -12,5 +12,6 @@ main = do
   case parse parseCauterize fname d of
     Left e -> print e
     Right v -> print $ gen v
+
   where
     fname = "example.scm"

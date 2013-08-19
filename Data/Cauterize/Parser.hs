@@ -4,6 +4,7 @@ import qualified Data.Text as T
 import Text.Parsec
 import Text.Parsec.Text
 import Control.Monad (liftM)
+import qualified Data.Map as M
 
 import Data.Cauterize.Types
 import Data.Cauterize.Parser.Utils
@@ -15,7 +16,12 @@ parseCauterize = parens $ do
   spaces
   v <- parseVersion
   spaces
-  liftM (Cauterize n v) (parseRule `sepBy` many1 space)
+
+  rs <- parseRule `sepBy` many1 space
+  return $ Cauterize n v (M.fromList $ namedRules rs)
+  where
+    namedRules :: [CauterizeRule] -> [(TypeName, CauterizeRule)]
+    namedRules rs = zip (map cauterizeName rs) rs
 
 typeName :: Parser TypeName
 typeName = do
@@ -89,7 +95,9 @@ parseEnumValue = parens $ do
   return $ EnumValue t c
 
 parseConst :: Parser Const
-parseConst = liftM (DecConst . T.pack) (many1 digit)
+parseConst = do
+  ds <- (many1 digit)
+  return $ DecConst (read ds) (T.pack ds)
 
 parseArray :: String -> (TypeName -> TypeName -> Const -> a) -> Parser a
 parseArray n p = parens $ do
