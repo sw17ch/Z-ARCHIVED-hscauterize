@@ -1,5 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE DeriveDataTypeable #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 module Data.Cauterize.Types ( Cauterize(..)
                             , CauterizeName(..)
                             , CauterizeVersion(..)
@@ -30,6 +31,8 @@ import qualified Data.Map as M
 import Text.PrettyPrint
 import Text.PrettyPrint.HughesPJClass
 
+import Data.String
+
 type TypeName = Text
 type FieldName = Text
 
@@ -41,11 +44,11 @@ data Cauterize = Cauterize { cauterizeSchemaName :: CauterizeName
                            } 
   deriving (Show, Data, Typeable)
 
-data CauterizeName = CauterizeName { unName :: Text }
-  deriving (Show, Data, Typeable)
+newtype CauterizeName = CauterizeName { unName :: Text }
+  deriving (Show, Data, Typeable, IsString)
 
-data CauterizeVersion = CauterizeVersion { unVersion :: Text }
-  deriving (Show, Data, Typeable)
+newtype CauterizeVersion = CauterizeVersion { unVersion :: Text }
+  deriving (Show, Data, Typeable, IsString)
 
 data CauterizeRule = CauterizeType { unType :: CautType }
   deriving (Show, Data, Typeable)
