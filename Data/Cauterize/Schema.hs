@@ -9,13 +9,6 @@ module Data.Cauterize.Schema
   , SchemaRule(..)
   , SchemaType(..)
 
-  , Scalar(..)
-  , Enumeration(..)
-  , FixedArray(..)
-  , BoundedArray(..)
-  , Composite(..)
-  , Group(..)
-
   , Field(..)
   , EnumValue(..)
 
@@ -55,18 +48,12 @@ newtype SchemaVersion = SchemaVersion { unVersion :: Text }
 data SchemaRule = SchemaType { unType :: SchemaType }
   deriving (Show, Data, Typeable)
 
-data SchemaType = SchemaScalar Scalar
-                | SchemaEnumeration Enumeration
-                | SchemaFixed FixedArray
-                | SchemaBounded BoundedArray
-                | SchemaComposite Composite
-                | SchemaGroup Group
-  deriving (Show, Data, Typeable)
-
-data Scalar = Scalar TypeName TypeName
-  deriving (Show, Data, Typeable)
-
-data Enumeration = Enumeration TypeName [EnumValue]
+data SchemaType = SchemaScalar TypeName TypeName
+                | SchemaEnumeration TypeName [EnumValue]
+                | SchemaFixedArray TypeName TypeName Const
+                | SchemaBoundedArray TypeName TypeName Const
+                | SchemaComposite TypeName [Field]
+                | SchemaGroup TypeName [Field]
   deriving (Show, Data, Typeable)
 
 data EnumValue = EnumValue TypeName (Maybe Const)
@@ -76,18 +63,6 @@ data Const = HexConst { constVal :: Integer, constText :: Text }
            | DecConst { constVal :: Integer, constText :: Text }
            | OctConst { constVal :: Integer, constText :: Text }
            | BinConst { constVal :: Integer, constText :: Text }
-  deriving (Show, Data, Typeable)
-
-data FixedArray = FixedArray TypeName TypeName Const
-  deriving (Show, Data, Typeable)
-
-data BoundedArray = BoundedArray TypeName TypeName Const
-  deriving (Show, Data, Typeable)
-
-data Composite = Composite TypeName [Field]
-  deriving (Show, Data, Typeable)
-
-data Group = Group TypeName [Field]
   deriving (Show, Data, Typeable)
 
 data Field = Field FieldName TypeName
@@ -111,12 +86,12 @@ instance Pretty SchemaVersion where
 
 instance Pretty SchemaType where
   pPrint t = parens $ case t of
-                        (SchemaScalar (Scalar n m)) -> text "scalar" <+> ppTxt n <+> ppTxt m
-                        (SchemaEnumeration (Enumeration n vs)) -> text "enumeration" <+> ppTxt n <+> pVM vs
-                        (SchemaFixed (FixedArray n m c)) -> text "fixed" <+> ppTxt n <+> ppTxt m <+> pPrint c
-                        (SchemaBounded (BoundedArray n m c)) -> text "bounded" <+> ppTxt n <+> ppTxt m <+> pPrint c
-                        (SchemaComposite (Composite n fs)) -> text "composite" <+> ppTxt n <+> pVM fs
-                        (SchemaGroup (Group n fs)) -> text "group" <+> ppTxt n <+> pVM fs
+                        (SchemaScalar n m) -> text "scalar" <+> ppTxt n <+> ppTxt m
+                        (SchemaEnumeration n vs) -> text "enumeration" <+> ppTxt n <+> pVM vs
+                        (SchemaFixedArray n m c) -> text "fixed" <+> ppTxt n <+> ppTxt m <+> pPrint c
+                        (SchemaBoundedArray n m c) -> text "bounded" <+> ppTxt n <+> ppTxt m <+> pPrint c
+                        (SchemaComposite n fs) -> text "composite" <+> ppTxt n <+> pVM fs
+                        (SchemaGroup n fs) -> text "group" <+> ppTxt n <+> pVM fs
     where
       pVM vs = vcat $ map pPrint vs
     
@@ -141,12 +116,12 @@ class TypeNamed a where
   typeName :: a -> TypeName
 
 instance TypeNamed SchemaRule where
-  typeName (SchemaType (SchemaScalar (Scalar n _))) = n
-  typeName (SchemaType (SchemaEnumeration (Enumeration n _))) = n
-  typeName (SchemaType (SchemaFixed (FixedArray n _ _))) = n
-  typeName (SchemaType (SchemaBounded (BoundedArray n _ _))) = n
-  typeName (SchemaType (SchemaComposite (Composite n _))) = n
-  typeName (SchemaType (SchemaGroup (Group n _))) = n
+  typeName (SchemaType (SchemaScalar n _)) = n
+  typeName (SchemaType (SchemaEnumeration n _)) = n
+  typeName (SchemaType (SchemaFixedArray n _ _)) = n
+  typeName (SchemaType (SchemaBoundedArray n _ _)) = n
+  typeName (SchemaType (SchemaComposite n _)) = n
+  typeName (SchemaType (SchemaGroup n _)) = n
 
 {- And now, some helper functions. -}
 

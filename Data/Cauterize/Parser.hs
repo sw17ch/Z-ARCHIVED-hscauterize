@@ -51,38 +51,31 @@ parseVersion :: Parser SchemaVersion
 parseVersion = liftM SchemaVersion quoted
 
 parseType :: Parser SchemaType
-parseType = try pScalar
-        <|> try pEnumeration
-        <|> try pFixed
-        <|> try pBounded
-        <|> try pComposite
-        <|>     pGroup
-  where
-    pScalar = liftM SchemaScalar parseScalar
-    pEnumeration = liftM SchemaEnumeration parseEnumeration
-    pFixed = liftM SchemaFixed parseFixed
-    pBounded = liftM SchemaBounded parseBounded
-    pComposite = liftM SchemaComposite parseComposite
-    pGroup = liftM SchemaGroup parseGroup
+parseType = try parseScalar
+        <|> try parseEnumeration
+        <|> try parseFixed
+        <|> try parseBounded
+        <|> try parseComposite
+        <|>     parseGroup
 
 string_ :: String -> Parser ()
 string_ n = string n >> spaces'
 
-parseScalar :: Parser Scalar
+parseScalar :: Parser SchemaType
 parseScalar = parens $ do
   string_ "scalar"
   t1 <- parseTypeName 
   spaces
   t2 <- parseTypeName 
-  return $ Scalar t1 t2
+  return $ SchemaScalar t1 t2
 
-parseEnumeration :: Parser Enumeration
+parseEnumeration :: Parser SchemaType
 parseEnumeration = parens $ do
   string_ "enumeration"
   t <- parseTypeName
   spaces
   vs <- parseEnumValue `sepBy1` spaces
-  return $ Enumeration t vs
+  return $ SchemaEnumeration t vs
 
 parseEnumValue :: Parser EnumValue
 parseEnumValue = parens $ do
@@ -107,11 +100,11 @@ parseArray n p = parens $ do
   return $ p t arrayType l
   
 
-parseFixed :: Parser FixedArray
-parseFixed = parseArray "fixed" FixedArray
+parseFixed :: Parser SchemaType
+parseFixed = parseArray "fixed" SchemaFixedArray
 
-parseBounded :: Parser BoundedArray
-parseBounded = parseArray "bounded" BoundedArray
+parseBounded :: Parser SchemaType
+parseBounded = parseArray "bounded" SchemaBoundedArray
 
 parseCollection :: String -> (TypeName -> [Field] -> a) -> Parser a
 parseCollection n c = parens $ do
@@ -129,8 +122,8 @@ parseField = parens $ do
   t <- parseTypeName
   return $ Field f t
 
-parseComposite :: Parser Composite
-parseComposite = parseCollection "composite" Composite
+parseComposite :: Parser SchemaType
+parseComposite = parseCollection "composite" SchemaComposite
 
-parseGroup :: Parser Group
-parseGroup = parseCollection "group" Group
+parseGroup :: Parser SchemaType
+parseGroup = parseCollection "group" SchemaGroup
