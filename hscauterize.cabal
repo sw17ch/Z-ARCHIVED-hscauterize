@@ -21,7 +21,8 @@ executable hscauterize
                        prettyclass ==1.0.*,
                        syb ==0.3.*,
                        containers ==0.5.*,
-                       mtl ==2.1.2
+                       mtl ==2.1.2,
+                       optparse-applicative ==0.8.*
 
 
   main-is:             hscauterize.hs
@@ -30,7 +31,8 @@ library
   ghc-options:         -Wall
   exposed-modules:     Data.Cauterize.Parser,
                        Data.Cauterize.Parser.Utils,
-                       Data.Cauterize.Types,
+                       Data.Cauterize.Schema,
+                       Data.Cauterize.Specification,
                        Data.Cauterize.Generators.C
   other-modules:       
   build-depends:       base ==4.*,

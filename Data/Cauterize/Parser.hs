@@ -1,4 +1,4 @@
-module Data.Cauterize.Parser ( parseCauterize ) where
+module Data.Cauterize.Parser ( parseSchema ) where
 
 import qualified Data.Text as T
 import Text.Parsec
@@ -6,11 +6,11 @@ import Text.Parsec.Text
 import Control.Monad (liftM)
 import qualified Data.Map as M
 
-import Data.Cauterize.Types
+import Data.Cauterize.Schema
 import Data.Cauterize.Parser.Utils
 
-parseCauterize :: Parser Cauterize
-parseCauterize = parens $ do
+parseSchema :: Parser Schema
+parseSchema = parens $ do
   string "cauterize" >> spaces'
   n <- parseName
   spaces
@@ -18,13 +18,13 @@ parseCauterize = parens $ do
   spaces
 
   rs <- parseRule `sepBy` many1 space
-  return $ Cauterize n v (M.fromList $ namedRules rs)
+  return $ Schema n v (M.fromList $ namedRules rs)
   where
-    namedRules :: [CauterizeRule] -> [(TypeName, CauterizeRule)]
-    namedRules rs = zip (map cauterizeName rs) rs
+    namedRules :: [SchemaRule] -> [(TypeName, SchemaRule)]
+    namedRules rs = zip (map typeName rs) rs
 
-typeName :: Parser TypeName
-typeName = do
+parseTypeName :: Parser TypeName
+parseTypeName = do
     f <- oneOf first
     rs <- many $ oneOf rest
     return $ T.pack (f:rs)
@@ -36,21 +36,21 @@ typeName = do
     first = under ++ lowers ++ uppers
     rest = first ++ digits
 
-fieldName :: Parser FieldName
-fieldName = typeName
+parseFieldName :: Parser FieldName
+parseFieldName = parseTypeName
 
-parseRule :: Parser CauterizeRule
+parseRule :: Parser SchemaRule
 parseRule = pType
   where
-    pType = liftM CauterizeType parseType
+    pType = liftM SchemaType parseType
 
-parseName :: Parser CauterizeName
-parseName = liftM CauterizeName quoted
+parseName :: Parser SchemaName
+parseName = liftM SchemaName quoted
 
-parseVersion :: Parser CauterizeVersion
-parseVersion = liftM CauterizeVersion quoted
+parseVersion :: Parser SchemaVersion
+parseVersion = liftM SchemaVersion quoted
 
-parseType :: Parser CautType
+parseType :: Parser SchemaType
 parseType = try pScalar
         <|> try pEnumeration
         <|> try pFixed
@@ -58,12 +58,12 @@ parseType = try pScalar
         <|> try pComposite
         <|>     pGroup
   where
-    pScalar = liftM CautScalar parseScalar
-    pEnumeration = liftM CautEnumeration parseEnumeration
-    pFixed = liftM CautFixed parseFixed
-    pBounded = liftM CautBounded parseBounded
-    pComposite = liftM CautComposite parseComposite
-    pGroup = liftM CautGroup parseGroup
+    pScalar = liftM SchemaScalar parseScalar
+    pEnumeration = liftM SchemaEnumeration parseEnumeration
+    pFixed = liftM SchemaFixed parseFixed
+    pBounded = liftM SchemaBounded parseBounded
+    pComposite = liftM SchemaComposite parseComposite
+    pGroup = liftM SchemaGroup parseGroup
 
 string_ :: String -> Parser ()
 string_ n = string n >> spaces'
@@ -71,15 +71,15 @@ string_ n = string n >> spaces'
 parseScalar :: Parser Scalar
 parseScalar = parens $ do
   string_ "scalar"
-  t1 <- typeName 
+  t1 <- parseTypeName 
   spaces
-  t2 <- typeName 
+  t2 <- parseTypeName 
   return $ Scalar t1 t2
 
 parseEnumeration :: Parser Enumeration
 parseEnumeration = parens $ do
   string_ "enumeration"
-  t <- typeName
+  t <- parseTypeName
   spaces
   vs <- parseEnumValue `sepBy1` spaces
   return $ Enumeration t vs
@@ -87,21 +87,21 @@ parseEnumeration = parens $ do
 parseEnumValue :: Parser EnumValue
 parseEnumValue = parens $ do
   string_ "value"
-  t <- typeName
+  t <- parseTypeName
   c <- option Nothing (spaces >> liftM Just parseConst)
   return $ EnumValue t c
 
 parseConst :: Parser Const
 parseConst = do
-  ds <- (many1 digit)
+  ds <- many1 digit
   return $ DecConst (read ds) (T.pack ds)
 
 parseArray :: String -> (TypeName -> TypeName -> Const -> a) -> Parser a
 parseArray n p = parens $ do
   string_ n
-  t <- typeName
+  t <- parseTypeName
   spaces
-  arrayType <- typeName
+  arrayType <- parseTypeName
   spaces
   l <- parseConst
   return $ p t arrayType l
@@ -116,7 +116,7 @@ parseBounded = parseArray "bounded" BoundedArray
 parseCollection :: String -> (TypeName -> [Field] -> a) -> Parser a
 parseCollection n c = parens $ do
   string n >> spaces'
-  t <- typeName
+  t <- parseTypeName
   spaces
   fs <- parseField `sepBy1` spaces
   return $ c t fs
@@ -124,9 +124,9 @@ parseCollection n c = parens $ do
 parseField :: Parser Field
 parseField = parens $ do
   string "field" >> spaces'
-  f <- fieldName
+  f <- parseFieldName
   spaces
-  t <- typeName
+  t <- parseTypeName
   return $ Field f t
 
 parseComposite :: Parser Composite

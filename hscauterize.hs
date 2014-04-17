@@ -4,14 +4,33 @@ import qualified Data.Text.IO as TO
 
 import Text.Parsec
 import Data.Cauterize.Parser
+import Data.Cauterize.Specification
 import qualified Data.Cauterize.Generators.C as C
+import Options.Applicative
+
+data CautOpts = CautOpts
+  { inputFile :: String
+  } deriving (Show)
+
+
+optParser :: Parser CautOpts
+optParser = CautOpts
+  <$> strOption
+    ( long "input"
+   <> metavar "FILE_PATH"
+   <> help "Input Cauterize schema file."
+    )
+
+opts :: ParserInfo CautOpts
+opts = info (optParser <**> helper)
+  ( fullDesc
+ <> progDesc "Process Cauterize schema files."
+  )
 
 main :: IO ()
 main = do
-  d <- TO.readFile fname
-  case parse parseCauterize fname d of
+  o <- execParser opts
+  d <- TO.readFile $ inputFile o
+  case parse parseSchema (inputFile o) d of
     Left e -> print e
-    Right v -> print $ C.gen v
-
-  where
-    fname = "example.scm"
+    Right s -> print $ C.gen (fromSchema s)
