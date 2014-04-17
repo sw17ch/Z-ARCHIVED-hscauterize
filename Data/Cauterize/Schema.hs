@@ -6,7 +6,6 @@ module Data.Cauterize.Schema
   ( Schema(..)
   , SchemaName(..)
   , SchemaVersion(..)
-  , SchemaRule(..)
   , SchemaType(..)
 
   , Field(..)
@@ -37,7 +36,7 @@ type FieldName = Text
 -- instance of this type.
 data Schema = Schema { schemaName    :: SchemaName
                      , schemaVersion :: SchemaVersion
-                     , schemaRules   :: M.Map TypeName SchemaRule
+                     , schemaRules   :: M.Map TypeName SchemaType
                      } 
   deriving (Show, Data, Typeable)
 
@@ -46,9 +45,6 @@ newtype SchemaName = SchemaName { unName :: Text }
 
 newtype SchemaVersion = SchemaVersion { unVersion :: Text }
   deriving (Show, Data, Typeable, IsString)
-
-data SchemaRule = SchemaType { unType :: SchemaType }
-  deriving (Show, Data, Typeable)
 
 data SchemaType = SchemaScalar TypeName TypeName
                 | SchemaEnumeration TypeName [EnumValue]
@@ -91,9 +87,6 @@ instance Pretty Schema where
     where
       pRules = vcat $ map pPrint (M.elems rules)
 
-instance Pretty SchemaRule where
-  pPrint (SchemaType typ) = pPrint typ
-
 instance Pretty SchemaName where
   pPrint n = parens $ dqPpTxt (unName n)
 
@@ -131,13 +124,13 @@ instance Pretty Field where
 class TypeNamed a where
   typeName :: a -> TypeName
 
-instance TypeNamed SchemaRule where
-  typeName (SchemaType (SchemaScalar n _)) = n
-  typeName (SchemaType (SchemaEnumeration n _)) = n
-  typeName (SchemaType (SchemaFixedArray n _ _)) = n
-  typeName (SchemaType (SchemaBoundedArray n _ _)) = n
-  typeName (SchemaType (SchemaComposite n _)) = n
-  typeName (SchemaType (SchemaGroup n _)) = n
+instance TypeNamed SchemaType where
+  typeName (SchemaScalar n _) = n
+  typeName (SchemaEnumeration n _) = n
+  typeName (SchemaFixedArray n _ _) = n
+  typeName (SchemaBoundedArray n _ _) = n
+  typeName (SchemaComposite n _) = n
+  typeName (SchemaGroup n _) = n
 
 instance TypeNamed BuiltIn where
   typeName BiUint8 = "uint8"

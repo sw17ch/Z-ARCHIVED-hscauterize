@@ -17,11 +17,11 @@ parseSchema = parens $ do
   v <- parseVersion
   spaces
 
-  rs <- parseRule `sepBy` many1 space
-  return $ Schema n v (M.fromList $ namedRules rs)
+  rs <- parseType `sepBy` many1 space
+  return $ Schema n v (M.fromList $ namedTypes rs)
   where
-    namedRules :: [SchemaRule] -> [(TypeName, SchemaRule)]
-    namedRules rs = zip (map typeName rs) rs
+    namedTypes :: [SchemaType] -> [(TypeName, SchemaType)]
+    namedTypes rs = zip (map typeName rs) rs
 
 parseTypeName :: Parser TypeName
 parseTypeName = do
@@ -38,11 +38,6 @@ parseTypeName = do
 
 parseFieldName :: Parser FieldName
 parseFieldName = parseTypeName
-
-parseRule :: Parser SchemaRule
-parseRule = pType
-  where
-    pType = liftM SchemaType parseType
 
 parseName :: Parser SchemaName
 parseName = liftM SchemaName quoted

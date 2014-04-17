@@ -17,28 +17,28 @@ import qualified Data.Text as T
 import qualified Data.Map as M
 
 fromSchema :: Schema -> Spec
-fromSchema (Schema (SchemaName n) (SchemaVersion v) rs) =
+fromSchema (Schema (SchemaName n) (SchemaVersion v) ts) =
   let s = Spec
             (SpecName n)
             (SpecVersion v)
             (SpecHash $ mkSpecHash s)
-            (fromRules rs)
+            (fromTypes ts)
   in s
 
 mkSpecHash :: Spec -> T.Text
 mkSpecHash _ = "INVALID"
 
-fromRules :: M.Map TypeName SchemaRule -> M.Map TypeName SpecRule
-fromRules src = undefined
+fromTypes :: M.Map TypeName SchemaType -> M.Map TypeName SpecType
+fromTypes src = undefined
 
-fromRule :: SchemaRule -> SpecRule
+fromRule :: SchemaType -> SpecType
 fromRule = undefined
 
 data Spec = Spec
   { specName :: SpecName
   , specVersion :: SpecVersion
   , specHash :: SpecHash
-  , specRules :: M.Map TypeName SpecRule
+  , specTypes :: M.Map TypeName SpecType
   }
 
 newtype SpecName = SpecName T.Text
@@ -50,7 +50,7 @@ newtype SpecVersion = SpecVersion T.Text
 newtype SpecHash = SpecHash T.Text
   deriving (Show, Data, Typeable, IsString)
 
-data SpecRule = SpecScalar TypeName TypeName
+data SpecType = SpecScalar TypeName TypeName
               | SpecEnumeration TypeName [EnumValue] BuiltIn
               | SpecFixed TypeName TypeName Const
               | SpecBounded TypeName TypeName Const BuiltIn
