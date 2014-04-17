@@ -17,6 +17,8 @@ module Data.Cauterize.Schema
   , TypeName
   , FieldName
 
+  , BuiltIn
+
   , typeName
   ) where
 
@@ -64,6 +66,20 @@ data Const = HexConst { constVal :: Integer, constText :: Text }
            | OctConst { constVal :: Integer, constText :: Text }
            | BinConst { constVal :: Integer, constText :: Text }
   deriving (Show, Data, Typeable)
+
+data BuiltIn = BiUint8
+             | BiUint16
+             | BiUint32
+             | BiUint64
+             | BiInt8
+             | BiInt16
+             | BiInt32
+             | BiInt64
+             | BiFloat32
+             | BiFloat64
+             | BiBool
+  deriving (Show, Data, Typeable)
+
 
 data Field = Field FieldName TypeName
   deriving (Show, Data, Typeable)
@@ -122,6 +138,19 @@ instance TypeNamed SchemaRule where
   typeName (SchemaType (SchemaBoundedArray n _ _)) = n
   typeName (SchemaType (SchemaComposite n _)) = n
   typeName (SchemaType (SchemaGroup n _)) = n
+
+instance TypeNamed BuiltIn where
+  typeName BiUint8 = "uint8"
+  typeName BiUint16 = "uint16"
+  typeName BiUint32 = "uint32"
+  typeName BiUint64 = "uint64"
+  typeName BiInt8 = "int8"
+  typeName BiInt16 = "int16"
+  typeName BiInt32 = "int32"
+  typeName BiInt64 = "int64"
+  typeName BiFloat32 = "float32"
+  typeName BiFloat64 = "float64"
+  typeName BiBool = "bool"
 
 {- And now, some helper functions. -}
 
