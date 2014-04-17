@@ -6,5 +6,5 @@ import Data.Cauterize.Specification
 import qualified Text.PrettyPrint as P
 import qualified Data.Text as T
 
-gen :: Specification -> P.Doc
+gen :: Spec -> P.Doc
 gen = undefined
