@@ -1,12 +1,10 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE DeriveDataTypeable #-}
-{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 
 module Data.Cauterize.Schema
   ( Schema(..)
-  , SchemaName(..)
-  , SchemaVersion(..)
   , SchemaType(..)
+  , BuiltIn(..)
 
   , Field(..)
   , EnumValue(..)
@@ -15,22 +13,22 @@ module Data.Cauterize.Schema
 
   , TypeName
   , FieldName
-
-  , BuiltIn
+  , SchemaName
+  , SchemaVersion
 
   , typeName
   ) where
 
 import Data.Data
-import Data.Text (Text, unpack)
+import qualified Data.Text as T (Text, unpack)
 import qualified Data.Map as M
 import Text.PrettyPrint
 import Text.PrettyPrint.HughesPJClass
 
-import Data.String
-
-type TypeName = Text
-type FieldName = Text
+type TypeName = T.Text
+type FieldName = T.Text
+type SchemaName = T.Text
+type SchemaVersion = T.Text
 
 -- |The top level 'Schema' parser type. The schema parser returns an
 -- instance of this type.
@@ -39,12 +37,6 @@ data Schema = Schema { schemaName    :: SchemaName
                      , schemaRules   :: M.Map TypeName SchemaType
                      } 
   deriving (Show, Data, Typeable)
-
-newtype SchemaName = SchemaName { unName :: Text }
-  deriving (Show, Data, Typeable, IsString)
-
-newtype SchemaVersion = SchemaVersion { unVersion :: Text }
-  deriving (Show, Data, Typeable, IsString)
 
 data SchemaType = SchemaScalar TypeName TypeName
                 | SchemaEnumeration TypeName [EnumValue]
@@ -57,10 +49,10 @@ data SchemaType = SchemaScalar TypeName TypeName
 data EnumValue = EnumValue TypeName (Maybe Const)
   deriving (Show, Data, Typeable)
 
-data Const = HexConst { constVal :: Integer, constText :: Text }
-           | DecConst { constVal :: Integer, constText :: Text }
-           | OctConst { constVal :: Integer, constText :: Text }
-           | BinConst { constVal :: Integer, constText :: Text }
+data Const = HexConst { constVal :: Integer, constText :: T.Text }
+           | DecConst { constVal :: Integer, constText :: T.Text }
+           | OctConst { constVal :: Integer, constText :: T.Text }
+           | BinConst { constVal :: Integer, constText :: T.Text }
   deriving (Show, Data, Typeable)
 
 data BuiltIn = BiUint8
@@ -83,15 +75,9 @@ data Field = Field FieldName TypeName
 {- And now, some Show instances. -}
 
 instance Pretty Schema where
-  pPrint (Schema name version rules) = parens $ text "schema" <+> pPrint name <+> pPrint version <+> pRules
+  pPrint (Schema name version rules) = parens $ text "schema" <+> ppTxt name <+> ppTxt version <+> pRules
     where
       pRules = vcat $ map pPrint (M.elems rules)
-
-instance Pretty SchemaName where
-  pPrint n = parens $ dqPpTxt (unName n)
-
-instance Pretty SchemaVersion where
-  pPrint n = parens $ dqPpTxt (unVersion n)
 
 instance Pretty SchemaType where
   pPrint t = parens $ case t of
@@ -147,8 +133,5 @@ instance TypeNamed BuiltIn where
 
 {- And now, some helper functions. -}
 
-ppTxt :: Text -> Doc
-ppTxt = text . unpack
-
-dqPpTxt :: Text -> Doc
-dqPpTxt = doubleQuotes . ppTxt
+ppTxt :: T.Text -> Doc
+ppTxt = text . T.unpack

@@ -12,13 +12,13 @@ import Data.Cauterize.Parser.Utils
 parseSchema :: Parser Schema
 parseSchema = parens $ do
   string "cauterize" >> spaces'
-  n <- parseName
+  name <- quoted
   spaces
-  v <- parseVersion
+  version <- quoted
   spaces
 
   rs <- parseType `sepBy` many1 space
-  return $ Schema n v (M.fromList $ namedTypes rs)
+  return $ Schema name version (M.fromList $ namedTypes rs)
   where
     namedTypes :: [SchemaType] -> [(TypeName, SchemaType)]
     namedTypes rs = zip (map typeName rs) rs
@@ -38,12 +38,6 @@ parseTypeName = do
 
 parseFieldName :: Parser FieldName
 parseFieldName = parseTypeName
-
-parseName :: Parser SchemaName
-parseName = liftM SchemaName quoted
-
-parseVersion :: Parser SchemaVersion
-parseVersion = liftM SchemaVersion quoted
 
 parseType :: Parser SchemaType
 parseType = try parseScalar

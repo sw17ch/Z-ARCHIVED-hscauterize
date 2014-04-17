@@ -31,6 +31,10 @@ main :: IO ()
 main = do
   o <- execParser opts
   d <- TO.readFile $ inputFile o
+
   case parse parseSchema (inputFile o) d of
     Left e -> print e
-    Right s -> print $ C.gen (fromSchema s)
+    Right s -> do
+      print s
+      print $ fromSchema s
+      print $ C.gen (fromSchema s)
