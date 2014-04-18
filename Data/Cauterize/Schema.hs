@@ -16,14 +16,17 @@ module Data.Cauterize.Schema
   , SchemaName
   , SchemaVersion
 
+  , reinterpConst
   , typeName
   ) where
 
 import Data.Data
-import qualified Data.Text as T (Text, unpack)
+import Data.Maybe
+import qualified Data.Text as T (Text, pack, unpack)
 import qualified Data.Map as M
 import Text.PrettyPrint
 import Text.PrettyPrint.HughesPJClass
+import Numeric
 
 type TypeName = T.Text
 type FieldName = T.Text
@@ -55,6 +58,20 @@ data Const = HexConst { constVal :: Integer, constText :: T.Text }
            | BinConst { constVal :: Integer, constText :: T.Text }
   deriving (Show, Data, Typeable)
 
+reinterpConst :: Const -> Integer -> Const
+reinterpConst c i = case c of
+                      (HexConst _ _) -> HexConst i (T.pack $ showIntAtBase 16 intToChar i "")
+                      (DecConst _ _) -> DecConst i (T.pack $ showIntAtBase 10 intToChar i "")
+                      (OctConst _ _) -> OctConst i (T.pack $ showIntAtBase  8 intToChar i "")
+                      (BinConst _ _) -> BinConst i (T.pack $ showIntAtBase  2 intToChar i "")
+  where
+    mapping :: [(Int, Char)]
+    mapping = zip [0..15] "0123456789ABCDEF"
+
+    intToChar :: Int -> Char
+    intToChar = fromJust . flip lookup mapping
+
+
 data BuiltIn = BiUint8
              | BiUint16
              | BiUint32
@@ -75,21 +92,27 @@ data Field = Field FieldName TypeName
 {- And now, some Show instances. -}
 
 instance Pretty Schema where
-  pPrint (Schema name version rules) = parens $ text "schema" <+> ppTxt name <+> ppTxt version <+> pRules
+  pPrint (Schema name version rules) = parens $ hang pSchema 1 pRules
     where
+      pSchema = text "schema" <+> ppTxt name <+> ppTxt version
       pRules = vcat $ map pPrint (M.elems rules)
 
 instance Pretty SchemaType where
-  pPrint t = parens $ case t of
-                        (SchemaScalar n m) -> text "scalar" <+> ppTxt n <+> ppTxt m
-                        (SchemaEnumeration n vs) -> text "enumeration" <+> ppTxt n <+> pVM vs
-                        (SchemaFixedArray n m c) -> text "fixed" <+> ppTxt n <+> ppTxt m <+> pPrint c
-                        (SchemaBoundedArray n m c) -> text "bounded" <+> ppTxt n <+> ppTxt m <+> pPrint c
-                        (SchemaComposite n fs) -> text "composite" <+> ppTxt n <+> pVM fs
-                        (SchemaGroup n fs) -> text "group" <+> ppTxt n <+> pVM fs
+  pPrint (SchemaScalar n m) = parens $ text "scalar" <+> ppTxt n <+> ppTxt m
+  pPrint (SchemaEnumeration n vs) = parens $ hang pE 1 (pVM vs)
     where
-      pVM vs = vcat $ map pPrint vs
-    
+      pE = text "enumeration" <+> ppTxt n
+  pPrint (SchemaFixedArray n m c) = parens $ text "fixed" <+> ppTxt n <+> ppTxt m <+> pPrint c
+  pPrint (SchemaBoundedArray n m c) = parens $ text "bounded" <+> ppTxt n <+> ppTxt m <+> pPrint c
+  pPrint (SchemaComposite n fs) = parens $ hang pC 1 (pVM fs)
+    where
+      pC =  text "composite" <+> ppTxt n
+  pPrint (SchemaGroup n fs) = parens $ hang pG 1 (pVM fs)
+    where
+      pG =  text "composite" <+> ppTxt n
+     
+pVM :: Pretty a => [a] -> Doc
+pVM vs = vcat $ map pPrint vs
 
 instance Pretty EnumValue where
   pPrint (EnumValue n c)
@@ -130,6 +153,19 @@ instance TypeNamed BuiltIn where
   typeName BiFloat32 = "float32"
   typeName BiFloat64 = "float64"
   typeName BiBool = "bool"
+
+instance Pretty BuiltIn where
+  pPrint BiUint8 = text "uint8"
+  pPrint BiUint16 = text "uint16"
+  pPrint BiUint32 = text "uint32"
+  pPrint BiUint64 = text "uint64"
+  pPrint BiInt8 = text "int8"
+  pPrint BiInt16 = text "int16"
+  pPrint BiInt32 = text "int32"
+  pPrint BiInt64 = text "int64"
+  pPrint BiFloat32 = text "float32"
+  pPrint BiFloat64 = text "float64"
+  pPrint BiBool = text "bool"
 
 {- And now, some helper functions. -}
 
