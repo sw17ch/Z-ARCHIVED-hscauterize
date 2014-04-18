@@ -1,4 +1,4 @@
-module Data.Cauterize.Parser ( parseSchema ) where
+module Data.Cauterize.Parsers.Schema ( parseSchema ) where
 
 import qualified Data.Text as T
 import Text.Parsec
@@ -7,7 +7,7 @@ import Control.Monad (liftM)
 import qualified Data.Map as M
 
 import Data.Cauterize.Schema
-import Data.Cauterize.Parser.Utils
+import Data.Cauterize.Parsers.Utils
 
 parseSchema :: Parser Schema
 parseSchema = parens $ do
