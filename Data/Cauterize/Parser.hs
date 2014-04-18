@@ -73,6 +73,7 @@ parseEnumValue = parens $ do
   c <- option Nothing (spaces >> liftM Just parseConst)
   return $ EnumValue t c
 
+-- TODO: Make this handle the rest of the types, including negatives.
 parseConst :: Parser Const
 parseConst = do
   ds <- many1 digit
