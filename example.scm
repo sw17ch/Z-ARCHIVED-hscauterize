@@ -8,7 +8,9 @@
   (enumeration meep
                (value a)
                (value b)
-               (value c 40))
+               (value c 40)
+               (value d)
+               (value e 256))
 
   (fixed fixed_meeps meep 64)
   (bounded bounded_meeps meep 64)
