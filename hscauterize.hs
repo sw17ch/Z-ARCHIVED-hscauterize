@@ -8,6 +8,8 @@ import Data.Cauterize.Specification
 import qualified Data.Cauterize.Generators.C as C
 import Options.Applicative
 
+import qualified Text.PrettyPrint.HughesPJClass as P
+
 data CautOpts = CautOpts
   { inputFile :: String
   } deriving (Show)
@@ -35,6 +37,6 @@ main = do
   case parse parseSchema (inputFile o) d of
     Left e -> print e
     Right s -> do
-      print s
-      print $ fromSchema s
-      print $ C.gen (fromSchema s)
+      print $ P.pPrint s
+      putStrLn "=="
+      print $ P.pPrint $ fromSchema s
