@@ -1,12 +1,13 @@
 module Data.Cauterize.Parsers.Schema ( parseSchema ) where
 
-import qualified Data.Text as T
 import Text.Parsec
 import Text.Parsec.Text
 import Control.Monad (liftM)
 import qualified Data.Map as M
 
-import Data.Cauterize.Schema
+import Data.Cauterize.Types.Schema
+import Data.Cauterize.Types.TypeName
+import Data.Cauterize.Types.Field
 import Data.Cauterize.Parsers.Utils
 
 parseSchema :: Parser Schema
@@ -27,7 +28,7 @@ parseTypeName :: Parser TypeName
 parseTypeName = do
     f <- oneOf first
     rs <- many $ oneOf rest
-    return $ T.pack (f:rs)
+    return (f:rs)
   where
     under = "_"
     digits = ['0'..'9']
@@ -75,9 +76,7 @@ parseEnumValue = parens $ do
 
 -- TODO: Make this handle the rest of the types, including negatives.
 parseConst :: Parser Const
-parseConst = do
-  ds <- many1 digit
-  return $ DecConst (read ds) (T.pack ds)
+parseConst = liftM (Const . read) (many1 digit)
 
 parseArray :: String -> (TypeName -> TypeName -> Const -> a) -> Parser a
 parseArray n p = parens $ do
@@ -88,7 +87,6 @@ parseArray n p = parens $ do
   spaces
   l <- parseConst
   return $ p t arrayType l
-  
 
 parseFixed :: Parser SchemaType
 parseFixed = parseArray "fixed" SchemaFixedArray

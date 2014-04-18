@@ -4,8 +4,7 @@ import qualified Data.Text.IO as TO
 
 import Text.Parsec
 import Data.Cauterize.Parsers.Schema
-import Data.Cauterize.Specification
-import qualified Data.Cauterize.Generators.C as C
+import Data.Cauterize.Types.Specification
 import Options.Applicative
 
 import qualified Text.PrettyPrint.HughesPJClass as P

@@ -1,7 +1,6 @@
-{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE DeriveDataTypeable #-}
 
-module Data.Cauterize.Specification
+module Data.Cauterize.Types.Specification
   ( Spec(..)
   , SpecName
   , SpecVersion
@@ -9,25 +8,28 @@ module Data.Cauterize.Specification
   , fromSchema
   ) where
 
-import Data.Cauterize.Schema
+import Data.Cauterize.Types.Schema
+import Data.Cauterize.Types.BuiltIn
+import Data.Cauterize.Types.TypeName
+import Data.Cauterize.Types.Field
 import Data.Data
 import Data.List
-import qualified Data.Text as T
 import qualified Data.Map as M
+import qualified Crypto.Hash as H
 
 import Text.PrettyPrint
 import Text.PrettyPrint.HughesPJClass
 
-type SpecName = T.Text
-type SpecVersion = T.Text
-type SpecHash = T.Text
+type SpecName = String
+type SpecVersion = String
+type SpecHash = String
 
 fromSchema :: Schema -> Spec
 fromSchema (Schema n v ts) =
   let s = Spec n v (mkSpecHash s) (fromTypes ts) in s
 
-mkSpecHash :: Spec -> T.Text
-mkSpecHash _ = "HASH_GOES_HERE"
+mkSpecHash :: Spec -> String
+mkSpecHash _ = "0000000000000000000000000000000000000000"
 
 maxu8, maxu16, maxu32, maxu64 :: Integer
 maxu8  = (2 :: Integer)^(8 :: Integer) - 1
@@ -52,6 +54,7 @@ reprFromCount v | v <= maxu8  = BiUint8
                 | v <= maxu16 = BiUint16
                 | v <= maxu32 = BiUint32
                 | v <= maxu64 = BiUint64
+                | otherwise = error $ "Cannot represent the value " ++ show v ++ "."
 
 reprFromBounds :: Integer -> Integer -> BuiltIn
 reprFromBounds mi ma | 0 <= mi && ma <= maxu8 = BiUint8
@@ -89,16 +92,14 @@ fromType (SchemaGroup name fields) =
   SpecGroup name fields (reprFromCount $ fromIntegral $ length fields)
 
 fromEnumValues :: [EnumValue] -> [EnumSpecValue]
-fromEnumValues vs = let c = DecConst 0 "0"
+fromEnumValues vs = let c = Const 0
                     in snd $ mapAccumL go c vs
   where
     go :: Const -> EnumValue -> (Const, EnumSpecValue)
-    go _ (EnumValue n (Just c)) = (reinterpConst c (constVal c + 1), EnumSpecValue n c)
+    go _ (EnumValue n (Just c)) = (Const (constVal c + 1), EnumSpecValue n c)
     go c (EnumValue n Nothing) = let cv = constVal c
                                      cv' = cv + 1
-                                     c' = DecConst cv (T.pack $ show cv)
-                                     c'' = DecConst cv' (T.pack $ show cv')
-                                 in (c'', EnumSpecValue n c')
+                                 in (Const cv', EnumSpecValue n (Const cv))
 
 data Spec = Spec
   { specName :: SpecName
@@ -123,28 +124,25 @@ data EnumSpecValue = EnumSpecValue TypeName Const
 instance Pretty Spec where
   pPrint (Spec n v h ts) = parens $ hang pSpec 1 pTypes
     where
-      pSpec = text "specification" <+> ppTxt n <+> ppTxt v <+> ppTxt h 
+      pSpec = text "specification" <+> text n <+> text v <+> text h 
       pTypes = vcat $ map pPrint (M.elems ts)
 
 instance Pretty SpecType where
-  pPrint (SpecScalar name target) = parens $ text "scalar" <+> ppTxt name <+> ppTxt target
+  pPrint (SpecScalar name target) = parens $ text "scalar" <+> text name <+> text target
   pPrint (SpecEnumeration name values repr) = parens $ hang pEnum 1 pValues
     where
-      pEnum = text "enumeration" <+> ppTxt name <+> pPrint repr
+      pEnum = text "enumeration" <+> text name <+> pPrint repr
       pValues = vcat $ map pPrint values
-  pPrint (SpecFixed name target len) = parens $ text "fixed" <+> ppTxt name <+> ppTxt target <+> pPrint len
-  pPrint (SpecBounded name target maxLen repr) = parens $ text "bounded" <+> ppTxt name <+> ppTxt target <+> pPrint maxLen <+> pPrint repr
+  pPrint (SpecFixed name target len) = parens $ text "fixed" <+> text name <+> text target <+> pPrint len
+  pPrint (SpecBounded name target maxLen repr) = parens $ text "bounded" <+> text name <+> text target <+> pPrint maxLen <+> pPrint repr
   pPrint (SpecComposite name fields) = parens $ hang pComp 1 pFields
     where
-      pComp = text "composite" <+> ppTxt name
+      pComp = text "composite" <+> text name
       pFields = vcat $ map pPrint fields
   pPrint (SpecGroup name fields repr) = parens $ hang pGroup 1 pFields
     where
-      pGroup = text "group" <+> ppTxt name <+> pPrint repr
+      pGroup = text "group" <+> text name <+> pPrint repr
       pFields = vcat $ map pPrint fields
 
 instance Pretty EnumSpecValue where
-  pPrint (EnumSpecValue name cnst) = parens $ text "value" <+> ppTxt name <+> pPrint cnst
-
-ppTxt :: T.Text -> Doc
-ppTxt = text . T.unpack
+  pPrint (EnumSpecValue name cnst) = parens $ text "value" <+> text name <+> pPrint cnst
