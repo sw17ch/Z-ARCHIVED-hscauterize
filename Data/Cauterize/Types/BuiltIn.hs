@@ -8,6 +8,9 @@ import Data.Data
 import Data.Cauterize.Types.TypeName
 import Text.PrettyPrint.HughesPJClass
 
+import Test.QuickCheck.Gen
+import Test.QuickCheck.Arbitrary
+
 data BuiltIn = BiUint8
              | BiUint16
              | BiUint32
@@ -19,7 +22,7 @@ data BuiltIn = BiUint8
              | BiFloat32
              | BiFloat64
              | BiBool
-  deriving (Show, Data, Typeable)
+  deriving (Show, Data, Typeable, Enum, Bounded)
 
 instance TypeNamed BuiltIn where
   typeName BiUint8 = "uint8"
@@ -36,3 +39,6 @@ instance TypeNamed BuiltIn where
 
 instance Pretty BuiltIn where
   pPrint b = text $ typeName b
+
+instance Arbitrary BuiltIn where
+  arbitrary = elements [minBound ..]
